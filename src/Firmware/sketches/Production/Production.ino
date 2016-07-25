@@ -1,3 +1,4 @@
+#include <ESP8266WiFi.h>
 #include <Adafruit_NeoPixel.h>
 
 #ifdef __AVR__
@@ -10,8 +11,8 @@
  *
  */
 
-#define WIFI_SSID                   ""
-#define WIFI_PASSWORD               ""
+#define WIFI_SSID                   "Bastis Pennyboard"
+#define WIFI_PASSWORD               "penny1337"
 
 
 #define PIN_STATUSLED               LED_BUILTIN
@@ -30,25 +31,26 @@ Adafruit_NeoPixel neopixelStrip = Adafruit_NeoPixel(NEOPIXELS_COUNT, PIN_NEOPIXE
 
 void neopixel_showSingleColorScene()
 {
-    const uint32_t wheelLEDs[8] =
+    const uint8_t WHEEL_LEDS_COUNT = 8;
+    const uint32_t wheelLEDs[WHEEL_LEDS_COUNT] =
     {
         0, 1,
         20, 21,
         22, 23,
-        42, 43
+        42, 43,
     };
 
     const uint32_t colorNormal = 0x00AEFF;
-    const uint32_t colorWheels = 0xff0030;
+    const uint32_t colorWheels = 0xA92CCE;
 
     for (uint16_t i = 0; i < neopixelStrip.numPixels(); i++)
     {
         neopixelStrip.setPixelColor(i, colorNormal);
     }
 
-    for (uint16_t i = 0; i < sizeof(wheelLEDs); i++)
+    for (uint16_t i = 0; i < WHEEL_LEDS_COUNT; i++)
     {
-        neopixelStrip.setPixelColor(wheelLEDs[i], colorNormal);
+        neopixelStrip.setPixelColor(wheelLEDs[i], colorWheels);
     }
 
     neopixelStrip.show();
@@ -83,7 +85,8 @@ void setupNeopixels()
 
 void setupWifi()
 {
-
+    WiFi.mode(WIFI_AP);
+    WiFi.softAP(WIFI_SSID, WIFI_PASSWORD);
 }
 
 void setup()
