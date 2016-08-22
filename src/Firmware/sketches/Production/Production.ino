@@ -1,5 +1,4 @@
 #include <ESP8266WiFi.h>
-#include <DNSServer.h>
 #include <ESP8266WebServer.h>
 #include <Adafruit_NeoPixel.h>
 
@@ -24,8 +23,6 @@
 #define NEOPIXELS_BRIGHTNESS        255     // [0..255]
 
 Adafruit_NeoPixel neopixelStrip = Adafruit_NeoPixel(NEOPIXELS_COUNT, PIN_NEOPIXELS, NEO_GRB + NEO_KHZ800);
-
-DNSServer dnsServer = DNSServer();
 ESP8266WebServer webServer = ESP8266WebServer(80);
 
 /*
@@ -43,7 +40,7 @@ void neopixel_off()
     neopixelStrip.show();
 }
 
-void neopixel_showSingleColorWithDifferentWheelColorScene()
+void neopixel_showSingleColorSceneWithDifferentWheelColor()
 {
     const uint8_t WHEEL_LEDS_COUNT = 8;
     const uint32_t wheelLEDs[WHEEL_LEDS_COUNT] =
@@ -112,21 +109,6 @@ float _mapPixelCountToPercentage(uint16_t i, float count)
     return (currentPixel - 0.0f) * (max - min) / (neopixelCount - 0.0f) + min;
 }
 
-
-void blinkStatusLED(const int times)
-{
-    for (int i = 0; i < times; i++)
-    {
-        // Enable LED
-        digitalWrite(PIN_STATUSLED, LOW);
-        delay(100);
-
-        // Disable LED
-        digitalWrite(PIN_STATUSLED, HIGH);
-        delay(100);
-    }
-}
-
 void setupPins()
 {
     pinMode(PIN_STATUSLED, OUTPUT);
@@ -142,7 +124,6 @@ void setupNeopixels()
 
 
 
-const uint16_t DNS_PORT = 53;
 IPAddress gatewayAddress = IPAddress(10, 0, 0, 1);
 IPAddress broadcastAddress = IPAddress(255, 255, 255, 0);
 
@@ -155,42 +136,32 @@ void setupWifi()
     WiFi.softAP(WIFI_SSID, WIFI_PASSWORD);
 }
 
-void setupDNSServer()
-{
-    Serial.println("Starting DNS server...");
-
-    dnsServer.setTTL(300);
-    dnsServer.setErrorReplyCode(DNSReplyCode::NonExistentDomain);
-
-    dnsServer.start(DNS_PORT, "*", gatewayAddress);
-}
-
 void setupWebserver()
 {
     Serial.println("Starting HTTP webserver...");
 
     webServer.begin();
 
-    webServer.on( "/", handleRoot );
-    webServer.onNotFound ( handleNotFound );
+    webServer.on("/", sendDefaultPage);
+    webServer.onNotFound(handleNotFound);
 
-    webServer.on( "/0", []() {
+    webServer.on("/scene/0", []() {
         neopixel_off();
-        webServer.send(200, "text/plain", "OK");
+        sendDefaultPage();
     });
 
-    webServer.on( "/1", []() {
-        neopixel_showSingleColorWithDifferentWheelColorScene();
-        webServer.send(200, "text/plain", "OK");
+    webServer.on("/scene/1", []() {
+        neopixel_showSingleColorSceneWithDifferentWheelColor();
+        sendDefaultPage();
     });
 
-    webServer.on( "/1", []() {
+    webServer.on("/scene/2", []() {
 
         uint32_t color1 = 0xA92CCE;
         uint32_t color2 = 0xCE2C2C;
 
         neopixel_showGradientScene(color1, color2);
-        webServer.send(200, "text/plain", "OK");
+        sendDefaultPage();
     });
 
     webServer.begin();
@@ -204,26 +175,18 @@ void setup()
     setupPins();
     setupNeopixels();
     setupWifi();
-
-    setupDNSServer();
     setupWebserver();
 
-    neopixel_showSingleColorWithDifferentWheelColorScene();
+    neopixel_showSingleColorSceneWithDifferentWheelColor();
 }
 
 void loop()
 {
-    dnsServer.processNextRequest();
     webServer.handleClient();
 }
 
 
 
-
-
-void handleRoot() {
-  webServer.send(200, "text/plain", "hello from esp8266!");
-}
 
 void handleNotFound(){
   String message = "File Not Found\n\n";
@@ -238,4 +201,9 @@ void handleNotFound(){
     message += " " + webServer.argName(i) + ": " + webServer.arg(i) + "\n";
   }
   webServer.send(404, "text/plain", message);
+}
+
+void sendDefaultPage()
+{
+    webServer.send(200, "text/html", "<h1>hello from esp8266!</h2>");
 }
