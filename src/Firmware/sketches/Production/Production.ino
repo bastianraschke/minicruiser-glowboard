@@ -40,7 +40,7 @@ void neopixel_off()
     neopixelStrip.show();
 }
 
-void neopixel_showStartupAmimation()
+void neopixel_showStartupAnimation()
 {
     const uint16_t neopixelCount = neopixelStrip.numPixels();
 
@@ -187,31 +187,28 @@ void setupWebserver()
 {
     Serial.println("Starting HTTP webserver...");
 
-    webServer.begin();
+    webServer.on("/", HTTP_GET, sendDefaultPage);
 
-
-    webServer.on("/", sendDefaultPage);
-
-    webServer.on("/scene/0", []() {
+    webServer.on("/scene/0", HTTP_GET, []() {
         neopixel_off();
         sendDefaultPage();
     });
 
-    webServer.on("/scene/1", []() {
+    webServer.on("/scene/1", HTTP_GET, []() {
         neopixel_showSingleColorSceneWithDifferentWheelColor();
         sendDefaultPage();
     });
 
-    webServer.on("/scene/2", []() {
+    webServer.on("/scene/2", HTTP_GET, []() {
 
         const uint32_t color1 = 0xA92CCE;
         const uint32_t color2 = 0xCE2C2C;
         neopixel_showGradientScene(color1, color2);
-        
+
         sendDefaultPage();
     });
 
-    webServer.on("/scene/3", []() {
+    webServer.on("/scene/3", HTTP_GET, []() {
 
         const uint32_t colorNormal = 0xFFFFFF;
         neopixel_showSingleColorScene(colorNormal);
@@ -221,9 +218,7 @@ void setupWebserver()
 
     webServer.onNotFound(handleNotFound);
 
-
-
-
+    webServer.begin();
 }
 
 void setup()
@@ -235,8 +230,10 @@ void setup()
     setupWifi();
     setupWebserver();
 
-    neopixel_showStartupAmimation();
+    // neopixel_showStartupAnimation();
     neopixel_showSingleColorSceneWithDifferentWheelColor();
+
+    Serial.println("Initialization done.");
 }
 
 void loop()
@@ -247,7 +244,8 @@ void loop()
 
 
 
-void handleNotFound(){
+void handleNotFound()
+{
   String message = "File Not Found\n\n";
   message += "URI: ";
   message += webServer.uri();
@@ -262,7 +260,7 @@ void handleNotFound(){
   webServer.send(404, "text/plain", message);
 }
 
-char defaultPageContent[] PROGMEM = R"=====(
+const char defaultPageContent[] PROGMEM = R"=====(
 <!DOCTYPE html>
 <html lang='en'>
 
@@ -300,7 +298,6 @@ a.lightscene {
 <a href='/scene/2' class='lightscene' style='background: linear-gradient(135deg, #A92CCE 0%, #CE2C2C 100%);'>Scene 2</a>
 <a href='/scene/3' class='lightscene' style='background: linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%); color: #000000;'>Flashlight mode</a>
 <a href='/scene/0' class='lightscene' style='background: linear-gradient(135deg, #000000 0%, #000000 100%);'>Disable underglow</a>
-
 
 </body>
 
