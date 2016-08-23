@@ -264,7 +264,7 @@ void handleNotFound()
 }
 
 
-const char defaultPageContent[] PROGMEM = R"=====(
+const String defaultPageContent = R"=====(
 <!DOCTYPE html>
 <html lang='en'>
 
@@ -303,6 +303,9 @@ a.lightscene {
 <a href='/scene/3' class='lightscene' style='background: linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%); color: #000000;'>Flashlight mode</a>
 <a href='/scene/0' class='lightscene' style='background: linear-gradient(135deg, #000000 0%, #000000 100%);'>Disable underglow</a>
 
+<p>Connected to )=====" + String(WIFI_SSID) + R"=====(. <br>Firmware version: )=====" + String(FIRMWARE_VERSION) + R"=====(</p>
+
+
 </body>
 
 </html>
@@ -312,5 +315,5 @@ a.lightscene {
 
 void sendDefaultPage()
 {
-    webServer.send(200, "text/html", defaultPageContent);
+    webServer.send(200, "text/html", defaultPageContent.c_str());
 }
