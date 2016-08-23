@@ -15,12 +15,12 @@
 #define WIFI_SSID                   "Bastis Pennyboard"
 #define WIFI_PASSWORD               "penny1337"
 
-
-#define PIN_STATUSLED               LED_BUILTIN
-
 #define PIN_NEOPIXELS               D1      // GPIO5 = D1
 #define NEOPIXELS_COUNT             44
-#define NEOPIXELS_BRIGHTNESS        255     // [0..255]
+#define NEOPIXELS_BRIGHTNESS        50     // [0..255]
+
+#define FIRMWARE_VERSION            "1.1"
+
 
 Adafruit_NeoPixel neopixelStrip = Adafruit_NeoPixel(NEOPIXELS_COUNT, PIN_NEOPIXELS, NEO_GRB + NEO_KHZ800);
 ESP8266WebServer webServer = ESP8266WebServer(80);
@@ -34,13 +34,51 @@ void neopixel_off()
 {
     for (uint16_t i = 0; i < neopixelStrip.numPixels(); i++)
     {
-        neopixelStrip.setPixelColor(i, 0);
+        neopixelStrip.setPixelColor(i, 0x000000);
     }
 
     neopixelStrip.show();
 }
 
-void neopixel_showSingleColorSceneWithDifferentWheelColor()
+void neopixel_showStartupAmimation()
+{
+    const uint16_t neopixelCount = neopixelStrip.numPixels();
+
+    const uint32_t colorNormal = 0xFFFFFF;
+    const uint32_t colorOff = 0x000000;
+
+    for (uint16_t i = 0; i < neopixelCount / 2; i++)
+    {
+        neopixelStrip.setPixelColor(i, colorNormal);
+        neopixelStrip.setPixelColor(neopixelCount - i, colorNormal);
+        neopixelStrip.show();
+
+        delay(20);
+    }
+
+    for (uint16_t i = neopixelCount / 2; i >= 0; i--)
+    {
+        neopixelStrip.setPixelColor(i, colorOff);
+        neopixelStrip.setPixelColor(neopixelCount - i, colorOff);
+        neopixelStrip.show();
+
+        delay(20);
+    }
+
+    delay(100);
+}
+
+void neopixel_showSingleColorScene(const uint32_t colorNormal)
+{
+    for (uint16_t i = 0; i < neopixelStrip.numPixels(); i++)
+    {
+        neopixelStrip.setPixelColor(i, colorNormal);
+    }
+
+    neopixelStrip.show();
+}
+
+void neopixel_showSingleColorSceneWithDifferentWheelColor(const uint32_t colorNormal, const uint32_t colorWheels)
 {
     const uint8_t WHEEL_LEDS_COUNT = 8;
     const uint32_t wheelLEDs[WHEEL_LEDS_COUNT] =
@@ -50,9 +88,6 @@ void neopixel_showSingleColorSceneWithDifferentWheelColor()
         22, 23,
         42, 43,
     };
-
-    const uint32_t colorNormal = 0x00AEFF;
-    const uint32_t colorWheels = 0xA92CCE;
 
     for (uint16_t i = 0; i < neopixelStrip.numPixels(); i++)
     {
@@ -65,6 +100,14 @@ void neopixel_showSingleColorSceneWithDifferentWheelColor()
     }
 
     neopixelStrip.show();
+}
+
+void neopixel_showSingleColorSceneWithDifferentWheelColor()
+{
+    const uint32_t colorNormal = 0x00AEFF;
+    const uint32_t colorWheels = 0xA92CCE;
+
+    neopixel_showSingleColorSceneWithDifferentWheelColor(colorNormal, colorWheels);
 }
 
 void neopixel_showGradientScene(const uint32_t color1, const uint32_t color2)
@@ -81,7 +124,7 @@ void neopixel_showGradientScene(const uint32_t color1, const uint32_t color2)
     const uint8_t color2_g = (color2 >>  8) & 0xFF;
     const uint8_t color2_b = (color2 >>  0) & 0xFF;
 
-    for(uint16_t i = 0; i < neopixelCount; i++)
+    for (uint16_t i = 0; i < neopixelCount; i++)
     {
         float percentage = _mapPixelCountToPercentage(i, neopixelCount);
 
@@ -109,10 +152,14 @@ float _mapPixelCountToPercentage(uint16_t i, float count)
     return (currentPixel - 0.0f) * (max - min) / (neopixelCount - 0.0f) + min;
 }
 
-void setupPins()
-{
-    pinMode(PIN_STATUSLED, OUTPUT);
-}
+
+
+
+
+
+
+
+
 
 void setupNeopixels()
 {
@@ -142,8 +189,8 @@ void setupWebserver()
 
     webServer.begin();
 
+
     webServer.on("/", sendDefaultPage);
-    webServer.onNotFound(handleNotFound);
 
     webServer.on("/scene/0", []() {
         neopixel_off();
@@ -157,14 +204,26 @@ void setupWebserver()
 
     webServer.on("/scene/2", []() {
 
-        uint32_t color1 = 0xA92CCE;
-        uint32_t color2 = 0xCE2C2C;
-
+        const uint32_t color1 = 0xA92CCE;
+        const uint32_t color2 = 0xCE2C2C;
         neopixel_showGradientScene(color1, color2);
+        
         sendDefaultPage();
     });
 
-    webServer.begin();
+    webServer.on("/scene/3", []() {
+
+        const uint32_t colorNormal = 0xFFFFFF;
+        neopixel_showSingleColorScene(colorNormal);
+
+        sendDefaultPage();
+    });
+
+    webServer.onNotFound(handleNotFound);
+
+
+
+
 }
 
 void setup()
@@ -172,11 +231,11 @@ void setup()
     Serial.begin(115200);
     delay(250);
 
-    setupPins();
     setupNeopixels();
     setupWifi();
     setupWebserver();
 
+    neopixel_showStartupAmimation();
     neopixel_showSingleColorSceneWithDifferentWheelColor();
 }
 
@@ -203,7 +262,54 @@ void handleNotFound(){
   webServer.send(404, "text/plain", message);
 }
 
+char defaultPageContent[] PROGMEM = R"=====(
+<!DOCTYPE html>
+<html lang='en'>
+
+<head>
+    <meta charset='UTF-8' /><meta name='viewport' content='width=device-width, initial-scale=1.0' />
+    <title>Glowboard control</title>
+
+
+<style type='text/css'>
+    
+body{
+    background-color: #222222;
+    font-family: sans-serif;
+    color: #DCDCDC;
+}
+
+a.lightscene {
+    display: block;
+    padding: 1.2em;
+    color: #FFFFFF;
+    
+    text-decoration: none;
+    margin-bottom: 1em;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<h1>Glowboard control</h1>
+
+<a href='/scene/1' class='lightscene' style='background: linear-gradient(135deg, #00AEFF 0%, #A92CCE 100%);'>Scene 1</a>
+<a href='/scene/2' class='lightscene' style='background: linear-gradient(135deg, #A92CCE 0%, #CE2C2C 100%);'>Scene 2</a>
+<a href='/scene/3' class='lightscene' style='background: linear-gradient(135deg, #FFFFFF 0%, #FFFFFF 100%); color: #000000;'>Flashlight mode</a>
+<a href='/scene/0' class='lightscene' style='background: linear-gradient(135deg, #000000 0%, #000000 100%);'>Disable underglow</a>
+
+
+</body>
+
+</html>
+
+)=====";
+
+
 void sendDefaultPage()
 {
-    webServer.send(200, "text/html", "<h1>hello from esp8266!</h2>");
+    webServer.send(200, "text/html", defaultPageContent);
 }
