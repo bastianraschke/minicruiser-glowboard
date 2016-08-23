@@ -21,9 +21,11 @@
 
 #define FIRMWARE_VERSION            "1.1"
 
-
 Adafruit_NeoPixel neopixelStrip = Adafruit_NeoPixel(NEOPIXELS_COUNT, PIN_NEOPIXELS, NEO_GRB + NEO_KHZ800);
 ESP8266WebServer webServer = ESP8266WebServer(80);
+
+const IPAddress gatewayAddress = IPAddress(10, 0, 0, 1);
+const IPAddress broadcastAddress = IPAddress(255, 255, 255, 0);
 
 /*
  * Neopixel effects
@@ -56,11 +58,13 @@ void neopixel_showStartupAnimation()
         delay(20);
     }
 
-    for (uint16_t i = neopixelCount / 2; i >= 0; i--)
+    for (uint16_t i = neopixelCount / 2; i > 0; i--)
     {
         neopixelStrip.setPixelColor(i, colorOff);
         neopixelStrip.setPixelColor(neopixelCount - i, colorOff);
         neopixelStrip.show();
+
+        Serial.println(i);
 
         delay(20);
     }
@@ -83,7 +87,7 @@ void neopixel_showSingleColorSceneWithDifferentWheelColor(const uint32_t colorNo
     const uint8_t WHEEL_LEDS_COUNT = 8;
     const uint32_t wheelLEDs[WHEEL_LEDS_COUNT] =
     {
-        0, 1,
+        00, 01,
         20, 21,
         22, 23,
         42, 43,
@@ -124,7 +128,7 @@ void neopixel_showGradientScene(const uint32_t color1, const uint32_t color2)
     const uint8_t color2_g = (color2 >>  8) & 0xFF;
     const uint8_t color2_b = (color2 >>  0) & 0xFF;
 
-    for (uint16_t i = 0; i < neopixelCount; i++)
+    for (uint16_t i = 0; i < neopixelCount / 2; i++)
     {
         float percentage = _mapPixelCountToPercentage(i, neopixelCount);
 
@@ -135,7 +139,9 @@ void neopixel_showGradientScene(const uint32_t color1, const uint32_t color2)
         const uint8_t b = (color1_b * percentage) + (color2_b * (1 - percentage));
 
         const uint32_t currentColor = neopixelStrip.Color(r, g, b);
+
         neopixelStrip.setPixelColor(i, currentColor);
+        neopixelStrip.setPixelColor(neopixelCount - i, currentColor);
     }
 
     neopixelStrip.show();
@@ -153,13 +159,10 @@ float _mapPixelCountToPercentage(uint16_t i, float count)
 }
 
 
-
-
-
-
-
-
-
+/*
+ * Default logic
+ *
+ */
 
 void setupNeopixels()
 {
@@ -168,13 +171,6 @@ void setupNeopixels()
     neopixelStrip.begin();
     neopixelStrip.setBrightness(NEOPIXELS_BRIGHTNESS);
 }
-
-
-
-IPAddress gatewayAddress = IPAddress(10, 0, 0, 1);
-IPAddress broadcastAddress = IPAddress(255, 255, 255, 0);
-
-
 
 void setupWifi()
 {
@@ -210,8 +206,15 @@ void setupWebserver()
 
     webServer.on("/scene/3", HTTP_GET, []() {
 
-        const uint32_t colorNormal = 0xFFFFFF;
-        neopixel_showSingleColorScene(colorNormal);
+        const uint32_t colorWhite = 0xFFFFFF;
+        neopixel_showSingleColorScene(colorWhite);
+
+        sendDefaultPage();
+    });
+
+    webServer.on("/scene/4", HTTP_GET, []() {
+
+        neopixel_showStartupAnimation();
 
         sendDefaultPage();
     });
@@ -230,7 +233,7 @@ void setup()
     setupWifi();
     setupWebserver();
 
-    // neopixel_showStartupAnimation();
+    neopixel_showStartupAnimation();
     neopixel_showSingleColorSceneWithDifferentWheelColor();
 
     Serial.println("Initialization done.");
@@ -259,6 +262,7 @@ void handleNotFound()
   }
   webServer.send(404, "text/plain", message);
 }
+
 
 const char defaultPageContent[] PROGMEM = R"=====(
 <!DOCTYPE html>
