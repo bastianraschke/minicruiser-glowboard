@@ -1,4 +1,5 @@
 #include <ESP8266WiFi.h>
+#include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <Adafruit_NeoPixel.h>
 
@@ -14,6 +15,9 @@
 
 #define WIFI_SSID                   "Bastis Pennyboard"
 #define WIFI_PASSWORD               "penny1337"
+
+#define MDNS_HOST                   "pennyboard"
+
 
 #define PIN_NEOPIXELS               D1      // GPIO5 = D1
 #define NEOPIXELS_COUNT             44
@@ -180,21 +184,26 @@ void setupWifi()
     WiFi.softAP(WIFI_SSID, WIFI_PASSWORD);
 }
 
+void setupMDNS()
+{
+    MDNS.begin(MDNS_HOST);
+}
+
 void setupWebserver()
 {
     Serial.println("Starting HTTP webserver...");
 
-    webServer.on("/", HTTP_GET, sendDefaultPage);
-    webServer.onNotFound(_webserverHandleNotFound);
+    webServer.on("/", HTTP_GET, _sendDefaultPage);
+    webServer.onNotFound(_sendDefaultPage);
 
     webServer.on("/scene/0", HTTP_GET, []() {
         neopixel_off();
-        sendDefaultPage();
+        _sendDefaultPage();
     });
 
     webServer.on("/scene/1", HTTP_GET, []() {
         neopixel_showSingleColorSceneWithDifferentWheelColor();
-        sendDefaultPage();
+        _sendDefaultPage();
     });
 
     webServer.on("/scene/2", HTTP_GET, []() {
@@ -202,19 +211,19 @@ void setupWebserver()
         const uint32_t color2 = 0xCE2C2C;
         neopixel_showGradientScene(color1, color2);
 
-        sendDefaultPage();
+        _sendDefaultPage();
     });
 
     webServer.on("/scene/3", HTTP_GET, []() {
         const uint32_t colorWhite = 0xFFFFFF;
         neopixel_showSingleColorScene(colorWhite);
 
-        sendDefaultPage();
+        _sendDefaultPage();
     });
 
     webServer.on("/effect/slide", HTTP_GET, []() {
         neopixel_showSlideAnimation();
-        sendDefaultPage();
+        _sendDefaultPage();
     });
 
     webServer.begin();
@@ -227,6 +236,7 @@ void setup()
 
     setupNeopixels();
     setupWifi();
+    setupMDNS();
     setupWebserver();
 
     // Initial effects
@@ -244,24 +254,9 @@ void loop()
 
 
 
-void _webserverHandleNotFound()
-{
-  String message = "File Not Found\n\n";
-  message += "URI: ";
-  message += webServer.uri();
-  message += "\nMethod: ";
-  message += (webServer.method() == HTTP_GET)?"GET":"POST";
-  message += "\nArguments: ";
-  message += webServer.args();
-  message += "\n";
-  for (uint8_t i=0; i<webServer.args(); i++){
-    message += " " + webServer.argName(i) + ": " + webServer.arg(i) + "\n";
-  }
-  webServer.send(404, "text/plain", message);
-}
-
 
 const String defaultPageContent = R"=====(
+
 <!DOCTYPE html>
 <html lang='en'>
 
@@ -326,7 +321,7 @@ const String defaultPageContent = R"=====(
 
 )=====";
 
-void sendDefaultPage()
+void _sendDefaultPage()
 {
     webServer.send(200, "text/html", defaultPageContent.c_str());
 }
