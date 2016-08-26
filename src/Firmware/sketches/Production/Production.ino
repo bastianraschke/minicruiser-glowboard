@@ -100,6 +100,14 @@ void setupWebserver()
         _sendDefaultPage();
     });
 
+    webServer.on("/scene/4", HTTP_GET, []() {
+        const uint32_t color1 = 0xFF6E00;
+        const uint32_t color2 = 0xFFFF00;
+        neopixel_showGradientScene(color1, color2);
+
+        _sendDefaultPage();
+    });
+
     webServer.on("/effect/slide", HTTP_GET, []() {
         neopixel_showSlideAnimation();
         _sendDefaultPage();
@@ -130,6 +138,86 @@ void loop()
 {
     webServer.handleClient();
 }
+
+
+/*
+ * Web pages
+ *
+ */
+
+const String defaultPageContent = R"=====(
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <title>Glowboard control</title>
+
+    <style type="text/css">
+        
+        body
+        {
+            /* background: url("/background.jpg") no-repeat #000000; */
+            background: radial-gradient(#4ceefb 0%, #000000 90%) center center fixed;
+            background-repeat: no-repeat;
+            background-size: cover;
+            color: #FFF;
+            font-family: sans-serif;
+        }
+
+        .content
+        {
+            background-color: rgba(34, 34, 34, 0.4);
+            padding: 0.5em;
+            position: absolute;
+            top: 0.5em;
+            bottom: 0.5em;
+            left: 0.5em;
+            right: 0.5em;
+        }
+
+        a.lightscene
+        {
+            color: #FFF;
+            display: block;
+            margin-bottom: 1.0em;
+            padding: 1.2em;
+            text-decoration: none;
+        }
+
+    </style>
+
+</head>
+
+<body>
+
+    <div class="content">
+
+        <h1>Glowboard control</h1>
+
+        <a href="/scene/1" class="lightscene" style="background: linear-gradient(135deg, #00AEFF 0%, #A92CCE 100%);">Scene 1</a>
+        <a href="/scene/2" class="lightscene" style="background: linear-gradient(135deg, #A92CCE 0%, #CE2C2C 100%);">Scene 2</a>
+        <a href="/scene/4" class="lightscene" style="background: linear-gradient(135deg, rgba(255, 110, 0, 0.85) 0%, rgba(255, 255, 0, 0.85) 100%);">Scene 3</a>
+        <a href="/scene/3" class="lightscene" style="background: rgba(255, 255, 255, 0.85); color: #000000;">Flashlight mode</a>
+        <a href="/scene/0" class="lightscene" style="background: rgba(10, 10, 10, 0.75);">Turn off</a>
+
+        <p>Connected to )=====" + String(WIFI_SSID) + R"=====(. <br>Firmware version: )=====" + String(FIRMWARE_VERSION) + R"=====(</p>
+
+    </div>
+
+</body>
+</html>
+
+)=====";
+
+void _sendDefaultPage()
+{
+    webServer.send(200, "text/html", defaultPageContent.c_str());
+}
+
 
 /*
  * Neopixel effects
@@ -261,81 +349,4 @@ float _mapPixelCountToPercentage(uint16_t i, float count)
     const float max = 1.0f;
 
     return (currentPixel - 0.0f) * (max - min) / (neopixelCount - 0.0f) + min;
-}
-
-
-/*
- * Web pages
- *
- */
-
-const String defaultPageContent = R"=====(
-
-<!DOCTYPE html>
-<html lang='en'>
-
-<head>
-    <meta charset='UTF-8' />
-    <meta name='viewport' content='width=device-width, initial-scale=1.0' />
-
-    <title>Glowboard control</title>
-
-    <style type='text/css'>
-        
-        body
-        {
-            background: radial-gradient(#4ceefb 0%, #000000 90%) center center fixed;
-            background-repeat: no-repeat;
-            background-size: cover;
-            color: #FFF;
-            font-family: sans-serif;
-        }
-
-        .content
-        {
-            background-color: rgba(34, 34, 34, 0.4);
-            padding: 0.5em;
-            position: absolute;
-            top: 0.5em;
-            bottom: 0.5em;
-            left: 0.5em;
-            right: 0.5em;
-        }
-
-        a.lightscene
-        {
-            color: #FFF;
-            display: block;
-            margin-bottom: 1.0em;
-            padding: 1.2em;
-            text-decoration: none;
-        }
-
-    </style>
-
-</head>
-
-<body>
-
-    <div class="content">
-
-        <h1>Glowboard control</h1>
-
-        <a href='/scene/1' class='lightscene' style='background: linear-gradient(135deg, #00AEFF 0%, #A92CCE 100%);'>Scene 1</a>
-        <a href='/scene/2' class='lightscene' style='background: linear-gradient(135deg, #A92CCE 0%, #CE2C2C 100%);'>Scene 2</a>
-        <a href='/scene/3' class='lightscene' style='background: rgba(255, 255, 255, 0.75); color: #000000;'>Flashlight mode</a>
-        <a href='/scene/0' class='lightscene' style='background: rgba(10, 10, 10, 0.75);'>Turn off</a>
-
-        <p>Connected to )=====" + String(WIFI_SSID) + R"=====(. <br>Firmware version: )=====" + String(FIRMWARE_VERSION) + R"=====(</p>
-
-    </div>
-
-</body>
-</html>
-
-)=====";
-
-void _sendDefaultPage()
-{
-    webServer.send(200, "text/html", defaultPageContent.c_str());
 }
