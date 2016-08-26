@@ -2,6 +2,7 @@
 #include <ESP8266mDNS.h>
 #include <ESP8266WebServer.h>
 #include <Adafruit_NeoPixel.h>
+#include <ESP8266HTTPUpdateServer.h>
 
 #ifdef __AVR__
     #include <avr/power.h>
@@ -18,15 +19,19 @@
 
 #define MDNS_HOST                   "pennyboard"
 
+#define UPDATE_PATH                 "/update"
+#define UPDATE_USERNAME             "admin"
+#define UPDATE_PASSWORD             "admin"
 
 #define PIN_NEOPIXELS               D1      // GPIO5 = D1
 #define NEOPIXELS_COUNT             44
 #define NEOPIXELS_BRIGHTNESS        50     // [0..255]
 
-#define FIRMWARE_VERSION            "1.1"
+#define FIRMWARE_VERSION            "1.2"
 
 Adafruit_NeoPixel neopixelStrip = Adafruit_NeoPixel(NEOPIXELS_COUNT, PIN_NEOPIXELS, NEO_GRB + NEO_KHZ800);
 ESP8266WebServer webServer = ESP8266WebServer(80);
+ESP8266HTTPUpdateServer httpFirmwareUpdater = ESP8266HTTPUpdateServer();
 
 const IPAddress gatewayAddress = IPAddress(10, 0, 0, 1);
 const IPAddress broadcastAddress = IPAddress(255, 255, 255, 0);
@@ -189,6 +194,11 @@ void setupMDNS()
     MDNS.begin(MDNS_HOST);
 }
 
+void setupFirmwareUpdater()
+{
+    httpFirmwareUpdater.setup(&webServer, UPDATE_PATH, UPDATE_USERNAME, UPDATE_PASSWORD); 
+}
+
 void setupWebserver()
 {
     Serial.println("Starting HTTP webserver...");
@@ -237,6 +247,7 @@ void setup()
     setupNeopixels();
     setupWifi();
     setupMDNS();
+    setupFirmwareUpdater();
     setupWebserver();
 
     // Initial effects
