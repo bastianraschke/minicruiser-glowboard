@@ -4,7 +4,7 @@ output = ""
 
 count = 0
 
-f = open("./src/background.jpg", "rb")
+f = open(".background.jpg", "rb")
 
 try:
     while (True):
