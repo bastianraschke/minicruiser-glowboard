@@ -4,13 +4,14 @@
 #include <Adafruit_NeoPixel.h>
 #include <ESP8266HTTPUpdateServer.h>
 
+// For Neopixels
 #ifdef __AVR__
     #include <avr/power.h>
 #endif
 
 
 /*
- * Connection configuration
+ * Configuration
  *
  */
 
@@ -21,13 +22,19 @@
 
 #define UPDATE_PATH                 "/update"
 #define UPDATE_USERNAME             "admin"
-#define UPDATE_PASSWORD             "admin"
+#define UPDATE_PASSWORD             "LHyr84X7sr6T"
 
 #define PIN_NEOPIXELS               D1      // GPIO5 = D1
 #define NEOPIXELS_COUNT             44
-#define NEOPIXELS_BRIGHTNESS        50     // [0..255]
+#define NEOPIXELS_BRIGHTNESS        200     // [0..255]
 
-#define FIRMWARE_VERSION            "1.2"
+#define FIRMWARE_VERSION            "1.3"
+
+
+/*
+ * Main program
+ *
+ */
 
 Adafruit_NeoPixel neopixelStrip = Adafruit_NeoPixel(NEOPIXELS_COUNT, PIN_NEOPIXELS, NEO_GRB + NEO_KHZ800);
 ESP8266WebServer webServer = ESP8266WebServer(80);
@@ -35,6 +42,94 @@ ESP8266HTTPUpdateServer httpFirmwareUpdater = ESP8266HTTPUpdateServer();
 
 const IPAddress gatewayAddress = IPAddress(10, 0, 0, 1);
 const IPAddress broadcastAddress = IPAddress(255, 255, 255, 0);
+
+void setupNeopixels()
+{
+    Serial.println("Setup Neopixels...");
+
+    neopixelStrip.begin();
+    neopixelStrip.setBrightness(NEOPIXELS_BRIGHTNESS);
+}
+
+void setupWifi()
+{
+    WiFi.mode(WIFI_AP);
+    WiFi.softAPConfig(gatewayAddress, gatewayAddress, broadcastAddress);
+    WiFi.softAP(WIFI_SSID, WIFI_PASSWORD);
+}
+
+void setupMDNS()
+{
+    MDNS.begin(MDNS_HOST);
+}
+
+void setupFirmwareUpdater()
+{
+    httpFirmwareUpdater.setup(&webServer, UPDATE_PATH, UPDATE_USERNAME, UPDATE_PASSWORD); 
+}
+
+void setupWebserver()
+{
+    Serial.println("Starting HTTP webserver...");
+
+    webServer.on("/", HTTP_GET, _sendDefaultPage);
+    webServer.onNotFound(_sendDefaultPage);
+
+    webServer.on("/scene/0", HTTP_GET, []() {
+        neopixel_off();
+        _sendDefaultPage();
+    });
+
+    webServer.on("/scene/1", HTTP_GET, []() {
+        neopixel_showSingleColorSceneWithDifferentWheelColor();
+        _sendDefaultPage();
+    });
+
+    webServer.on("/scene/2", HTTP_GET, []() {
+        const uint32_t color1 = 0xA92CCE;
+        const uint32_t color2 = 0xCE2C2C;
+        neopixel_showGradientScene(color1, color2);
+
+        _sendDefaultPage();
+    });
+
+    webServer.on("/scene/3", HTTP_GET, []() {
+        const uint32_t colorWhite = 0xFFFFFF;
+        neopixel_showSingleColorScene(colorWhite);
+
+        _sendDefaultPage();
+    });
+
+    webServer.on("/effect/slide", HTTP_GET, []() {
+        neopixel_showSlideAnimation();
+        _sendDefaultPage();
+    });
+
+    webServer.begin();
+}
+
+void setup()
+{
+    Serial.begin(115200);
+    delay(250);
+
+    setupNeopixels();
+    setupWifi();
+    setupMDNS();
+    setupFirmwareUpdater();
+    setupWebserver();
+
+    // Initial effects
+    neopixel_showSlideAnimation();
+    neopixel_showSingleColorSceneWithDifferentWheelColor();
+
+    Serial.println("Initialization done.");
+}
+
+void loop()
+{
+    webServer.handleClient();
+}
 
 /*
  * Neopixel effects
@@ -170,101 +265,9 @@ float _mapPixelCountToPercentage(uint16_t i, float count)
 
 
 /*
- * Default logic
+ * Web pages
  *
  */
-
-void setupNeopixels()
-{
-    Serial.println("Setup Neopixels...");
-
-    neopixelStrip.begin();
-    neopixelStrip.setBrightness(NEOPIXELS_BRIGHTNESS);
-}
-
-void setupWifi()
-{
-    WiFi.mode(WIFI_AP);
-    WiFi.softAPConfig(gatewayAddress, gatewayAddress, broadcastAddress);
-    WiFi.softAP(WIFI_SSID, WIFI_PASSWORD);
-}
-
-void setupMDNS()
-{
-    MDNS.begin(MDNS_HOST);
-}
-
-void setupFirmwareUpdater()
-{
-    httpFirmwareUpdater.setup(&webServer, UPDATE_PATH, UPDATE_USERNAME, UPDATE_PASSWORD); 
-}
-
-void setupWebserver()
-{
-    Serial.println("Starting HTTP webserver...");
-
-    webServer.on("/", HTTP_GET, _sendDefaultPage);
-    webServer.onNotFound(_sendDefaultPage);
-
-    webServer.on("/scene/0", HTTP_GET, []() {
-        neopixel_off();
-        _sendDefaultPage();
-    });
-
-    webServer.on("/scene/1", HTTP_GET, []() {
-        neopixel_showSingleColorSceneWithDifferentWheelColor();
-        _sendDefaultPage();
-    });
-
-    webServer.on("/scene/2", HTTP_GET, []() {
-        const uint32_t color1 = 0xA92CCE;
-        const uint32_t color2 = 0xCE2C2C;
-        neopixel_showGradientScene(color1, color2);
-
-        _sendDefaultPage();
-    });
-
-    webServer.on("/scene/3", HTTP_GET, []() {
-        const uint32_t colorWhite = 0xFFFFFF;
-        neopixel_showSingleColorScene(colorWhite);
-
-        _sendDefaultPage();
-    });
-
-    webServer.on("/effect/slide", HTTP_GET, []() {
-        neopixel_showSlideAnimation();
-        _sendDefaultPage();
-    });
-
-    webServer.begin();
-}
-
-void setup()
-{
-    Serial.begin(115200);
-    delay(250);
-
-    setupNeopixels();
-    setupWifi();
-    setupMDNS();
-    setupFirmwareUpdater();
-    setupWebserver();
-
-    // Initial effects
-    neopixel_showSlideAnimation();
-    neopixel_showSingleColorSceneWithDifferentWheelColor();
-
-    Serial.println("Initialization done.");
-}
-
-void loop()
-{
-    webServer.handleClient();
-}
-
-
-
-
 
 const String defaultPageContent = R"=====(
 
